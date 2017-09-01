@@ -5,7 +5,11 @@ output: html_document
 
 ```{r setup, include=FALSE}
 
-#new comments
+# We teach thousands of students data analysis in online classes on the Coursera platform. Each of these classes includes a final project. Collect the write-ups people use for the Getting and Cleaning Data project and summarize the main sources of variation in how people complete the project.
+
+# 
+
+
 ```
 
 ## R Markdown
