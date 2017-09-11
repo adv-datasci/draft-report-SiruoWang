@@ -1,33 +1,30 @@
 ---
-title: "myfile.rmd"
-output: html_document
+title: "datascience_project.rmd"
+output:
+  html_document: default
+  pdf_document: default
 ---
 
+
 ```{r setup, include=FALSE}
-
-# We teach thousands of students data analysis in online classes on the Coursera platform. Each of these classes includes a final project. Collect the write-ups people use for the Getting and Cleaning Data project and summarize the main sources of variation in how people complete the project.
-
-# 
-
+# data 
 
 ```
 
-## R Markdown
+### steps to take for the coursera project:
+* collect write-ups of 31,636 repository results for the "Getting and Cleaning Data Project" on the github
+* store key words for each repo such as function names used to get data, library names imported to clean data
+* run statistical tests to detect the variations among these key words
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r cars}
-summary(cars)
-```
-
-## Including Plots
-
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
-```
-
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+### steps to take for the data scientists job project:
+* get data from https://www.indeed.com/q-Data-Scientist-jobs.html
+* get data from google jobs(data scientists & IT & engineering)
+* capture the key words from each job posting descriptions to do analysis:
+  + job opening data
+  + level of education required: eg. BS degree, MASTER degree, PHD degree
+  + programming languages required: eg. R, SAS, Python, java, C++etc.
+  + job category: internship/full time
+  + job locations
+  + which company has openings
+  
+ 
