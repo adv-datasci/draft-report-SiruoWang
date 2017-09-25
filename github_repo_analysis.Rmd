@@ -103,14 +103,15 @@ save(rfile_list, file = "rfile_list.rda")
 ```
 **explotary analysis: ** check how many times libraries, functions, base R are used in the repos.
 ```{r}
-
 load("rfile_list.rda")
 rfile_text <- unlist(rfile_list)
 library_usage <- rfile_text[grep("library\\(", rfile_text)]
+function_usage <- rfile_text[grep("\\(", rfile_text)]
 
 table(library_usage)
 barplot(table(library_usage))
 
+#table(function_usage)
 ```
 
 
