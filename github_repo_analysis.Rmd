@@ -12,9 +12,7 @@ output:
 **Data Source: ** [Getting and Cleaning Data project](https://github.com/search?utf8=✓&q=getting+and+cleaning+data&type=)
 
 
-```{r}
-# get data version 2
-
+```{r, eval=FALSE, echo=TRUE}
 # sort based on dates. lubridate
 library(dplyr)
 library(gh)
@@ -30,8 +28,6 @@ while(date_start < Sys.Date() - (day_inc+1)) {
         date_start <- date_start + days(day_inc + 1)
         i <- i + 1
 }
-rm(list=c("date_start","i","day_inc"))
-
 
 
 ### NOTE: Need to create a personal access authentication token for using GET /seach/code!!!
@@ -64,31 +60,40 @@ save(repos, file = "repos.rda")
 ```
 
 
-```{r}
+```{r, eval=FALSE, echo=TRUE}
+library(dplyr)
+library(gh)
+
 load("repos.rda")
+token <- readLines("githubtoken.txt")
+
 rfile_list <- list()
+for (i in 1:length(repos)){
+  rfile_list[[i]] <- NA
+}
 # "Cite Stephen's code to use gh function getting repo names"
 
-#length(repos)
-for (i in length(repos)){
 
+for (i in 1:length(repos)){
   string <- paste0("GET /search/code?q=repo:", repos[[i]],"+extension:r")
-  res <- try(gh::gh(string, .token=token))
+  res <- try(gh::gh(string, .token=token), silent = TRUE)
   
-  if ("try-error" %in% class(res)) break
+  if ("try-error"  %in% class(res) == FALSE) {
   # loop_path to get all .R files
-  path <- try(res[[3]][[1]]$path)
-  if ("try-error" %in% class(path)) break
-  
-  code.url <- file.path("https://raw.githubusercontent.com",repos[[i]], "master", path)
-  code.url <- gsub(" ","%20",code.url)
-  code <- code.url %>% readLines(warn = FALSE)
-  execode <- code[!grepl("^#", code) & !grepl("\\ ^#", code) & code != "" & code != " "]
-  
-  
-  rfile_list[[i]] <- execode
-  print(i)
-  Sys.sleep(10)
+    path <- try(res[[3]][[1]]$path, silent = TRUE)
+    
+    if ("try-error" %in% class(path) == FALSE) {
+    
+      code.url <- file.path("https://raw.githubusercontent.com",repos[[i]], "master", path)
+      code.url <- gsub(" ","%20",code.url)
+      code <- code.url %>% readLines(warn = FALSE)
+      execode <- code[!grepl("^#", code) & !grepl("\\ ^#", code) & code != "" & code != " "]
+      
+      print(i)
+      rfile_list[[i]] <- execode
+      Sys.sleep(10)
+    }
+  }
 }
 
 
