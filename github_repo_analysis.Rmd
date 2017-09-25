@@ -1,0 +1,115 @@
+---
+title: "Analysis "
+author: "Sara Wang"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+
+**Questions to ask: ** In the Coursera platform, thousands of students are taking data analysis online classes. Each of these classes includes a final project. For the *Getting and Cleaning Data project*, we want to explore the main sources of variation in how people complete the project.
+
+**Data Source: ** [Getting and Cleaning Data project](https://github.com/search?utf8=✓&q=getting+and+cleaning+data&type=)
+
+
+```{r}
+# get data version 2
+
+# sort based on dates. lubridate
+library(dplyr)
+library(gh)
+library(lubridate)
+
+# "Cite Andrew Leroux's code to get dates"
+date_start <- ymd("2015-12-01")        ## start date
+day_inc  <- 14                       ## increment days by 14 at a time
+dates <- c()
+i <- 1
+while(date_start < Sys.Date() - (day_inc+1)) {
+        dates[[i]] <- c(rep(date_start,2) %m+% c(days(-1),days(day_inc+1)))
+        date_start <- date_start + days(day_inc + 1)
+        i <- i + 1
+}
+rm(list=c("date_start","i","day_inc"))
+
+
+
+### NOTE: Need to create a personal access authentication token for using GET /seach/code!!!
+### Do this here: https://github.com/settings/tokens
+token <- readLines("githubtoken.txt")
+repos <- c()
+#length(dates)
+for (dates_num in length(dates[1:2])){
+
+### Only 100 results per page (the max). Change page=1 parameter to get all the repositories.
+gh_date <- paste("created:", paste(dates[[dates_num]], collapse=".."), sep="")
+
+  #1:10
+  for (page_num in 1:2){
+
+    repo_name <- paste0("GET /search/repositories?q=getting+and+cleaning+data+",
+            gh_date, "&per_page=100")
+    x <- try(gh(repo_name, page = page_num, .token = token))
+    
+    if ("try-error" %in% class(x)) break
+    
+    repos <- c(sapply(x[[3]], "[[", "full_name"),repos)
+    #print(page_num)
+  }
+  
+  Sys.sleep(60)
+}
+
+save(repos, file = "repos.rda")
+```
+
+
+```{r}
+load("repos.rda")
+rfile_list <- list()
+# "Cite Stephen's code to use gh function getting repo names"
+
+#length(repos)
+for (i in length(repos)){
+
+  string <- paste0("GET /search/code?q=repo:", repos[[i]],"+extension:r")
+  res <- try(gh::gh(string, .token=token))
+  
+  if ("try-error" %in% class(res)) break
+  # loop_path to get all .R files
+  path <- try(res[[3]][[1]]$path)
+  if ("try-error" %in% class(path)) break
+  
+  code.url <- file.path("https://raw.githubusercontent.com",repos[[i]], "master", path)
+  code.url <- gsub(" ","%20",code.url)
+  code <- code.url %>% readLines(warn = FALSE)
+  execode <- code[!grepl("^#", code) & !grepl("\\ ^#", code) & code != "" & code != " "]
+  
+  
+  rfile_list[[i]] <- execode
+  print(i)
+  Sys.sleep(10)
+}
+
+
+
+save(rfile_list, file = "rfile_list.rda")
+
+```
+**explotary analysis: ** check how many times libraries, functions, base R are used in the repos.
+```{r}
+
+load("rfile_list.rda")
+rfile_text <- unlist(rfile_list)
+library_usage <- rfile_text[grep("library\\(", rfile_text)]
+
+table(library_usage)
+barplot(table(library_usage))
+
+```
+
+
+
+
+
+
