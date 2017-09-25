@@ -6,7 +6,7 @@ output:
   pdf_document: default
 ---
 
-
+ 
 **Questions to ask: ** In the Coursera platform, thousands of students are taking data analysis online classes. Each of these classes includes a final project. For the *Getting and Cleaning Data project*, we want to explore the main sources of variation in how people complete the project.
 
 **Data Source: ** [Getting and Cleaning Data project](https://github.com/search?utf8=✓&q=getting+and+cleaning+data&type=)
