@@ -1,0 +1,193 @@
+```{r, eval=FALSE, message = FALSE, echo=TRUE}
+# get repository names
+
+library(dplyr)
+library(gh)
+library(lubridate)
+
+# "Cite Andrew Leroux's code to get dates"
+# start from 2008
+
+date_start <- ymd("2008-01-01")        ## start date
+day_inc  <- 14                       ## increment days by 14 at a time
+dates <- c()
+i <- 1
+while(date_start < Sys.Date() - (day_inc+1)) {
+  dates[[i]] <- c(rep(date_start,2) %m+% c(days(-1),days(day_inc+1)))
+  date_start <- date_start + days(day_inc + 1)
+  i <- i + 1
+}
+
+
+### NOTE: Need to create a personal access authentication token for using GET /seach/code!!!
+### Do this here: https://github.com/settings/tokens
+token <- readLines("githubtoken.txt")
+
+dates_repos <- lapply(c(1:length(dates)), function(dates_num) {
+  gh_date <- paste("created:", paste(dates[[dates_num]], collapse=".."), sep="")
+  repos <- c()
+  
+  for (page_num in 1:10){
+    
+    repo_name <- paste0("GET /search/repositories?q=getting+and+cleaning+data+",
+                        gh_date, "&per_page=100")
+    x <- try(gh(repo_name, page = page_num, .token = token))
+    
+    if ("try-error" %in% class(x) == FALSE) {
+      
+      repos <- c(sapply(x[[3]], "[[", "full_name"),repos)
+    }
+    
+  }
+  print(dates[[dates_num]])
+  Sys.sleep(60)
+  return(repos)
+})
+
+
+save(dates_repos, file = "all_repos.rda")
+
+```
+
+```{r, eval=FALSE, message = FALSE, echo=TRUE}
+
+# "Cite Stephen's code to use gh function getting repo names"
+for (i in 1:length(repos)){
+  i = 328
+  string <- paste0("GET /search/code?q=repo:", repos[i],"+extension:r")
+  res <- try(gh::gh(string, .token=token), silent = TRUE)
+  
+  if ("try-error"  %in% class(res) == FALSE) {
+    # loop_path to get all .R files
+    path <- try(res[[3]][[1]]$path, silent = TRUE)
+    
+    if ("try-error" %in% class(path) == FALSE) {
+      print(i)
+      code.url <- file.path("https://raw.githubusercontent.com",repos[[i]], "master", path)
+      code.url <- gsub(" ","%20",code.url)
+      
+      tryCatch({code <- readLines(code.url, warn = FALSE)
+                rfile_list[[i]] <- code},
+               error = function(x) {message(x)}, 
+               warning = function(x) {message(x)})
+ 
+      Sys.sleep(5)
+    }
+    else {
+      print(paste0("no r file found in the repo: ",repos[i]))
+      numof_unfinished <- numof_unfinished +1}
+  }
+  
+}
+
+
+print(paste0("number of unfinished: ",numof_unfinished))
+save(rfile_list, file = "rfile_list.rda")
+
+```
+
+```{r, message=FALSE}
+library(ggplot2)
+library(gridExtra)
+library(lattice)
+
+
+load("rfile_list.rda")
+sum(is.na(rfile_list)) #num of students who didn't complete the course
+sum(is.na(rfile_list))/length(rfile_list) #ratio of students who didn't complete the course
+rfile_list <- rfile_list[!is.na(rfile_list)]
+rfile_length <- unlist(lapply(rfile_list,length))
+
+rfile_length_filter <- rfile_length[rfile_length<300]
+
+pure_text <- lapply(rfile_list, function(x) {x[!grepl("^#", x) & !grepl("\\ ^#", x) & x != "" & x != " "]})
+pure_text_length <- unlist(lapply(pure_text,length))
+
+pure_text_filter <- lapply(rfile_list[rfile_length<300], function(x) {x[!grepl("^#", x) & !grepl("\\ ^#", x) & x != "" & x != " "]})
+pure_text_length_filter <- unlist(lapply(pure_text_filter,length))
+
+rfile_puretext_dataframe <- data.frame(code_length = c(rfile_length,pure_text_length),
+                                       type = rep(c("full code","pure code"), each = length(pure_text_length)))
+
+rfile_puretext_filter_dataframe <- data.frame(code_length = c(rfile_length_filter,pure_text_length_filter),
+                                       type = rep(c("full code","pure code"), each = length(pure_text_length_filter)))
+
+
+p1 <- ggplot(data = rfile_puretext_dataframe, aes(x = type, y = code_length, color = type)) +
+  #geom_jitter(aes(x = type, y = code_length, color = type),
+  #            position = position_jitter(width = .1)) +
+  geom_boxplot(alpha = 0.8, fill = NA) +
+  ylim(c(-0.5,max(range(rfile_puretext_dataframe[,1]) + 0.5)))  + # set ranges for y axies
+  # change x labels name 
+  ggtitle(paste0("code length between full code length and pure code")) +
+  ylab("code length") +
+  theme(axis.text.x = element_text(angle = 0, hjust = 1), plot.title = element_text(hjust = .5))
+  
+p1
+
+p1_filter <- ggplot(data = rfile_puretext_filter_dataframe, aes(x = type, y = code_length, color = type)) +
+  geom_boxplot(alpha = 0.8, fill = NA) +
+  ylim(c(-0.5,max(range(rfile_puretext_filter_dataframe[,1]) + 0.5)))  + # set ranges for y axies
+  # change x labels name 
+  ggtitle(paste0("code length between full code length and pure code")) +
+  ylab("code length") +
+  theme(axis.text.x = element_text(angle = 0, hjust = 1), plot.title = element_text(hjust = .5))
+
+p1_filter
+
+
+rfile_text <- unlist(pure_text)
+library_usage <- rfile_text[grep("library\\(", rfile_text)]
+names(library_usage) <- NULL
+
+# 
+library_usage <- sapply(library_usage, function(x) gsub("\'|\t|\"| |;","",x)) 
+
+# handle suppressmessage()
+suppressmessage_idx <- grep("suppressMessages",library_usage)
+library_usage[suppressmessage_idx] <- sapply(library_usage[suppressmessage_idx], function(x) sub("suppressMessages\\(","",x)) 
+library_usage[suppressmessage_idx] <- sapply(library_usage[suppressmessage_idx], function(x) sub(")","",x)) 
+
+unique_library <- unique(library_usage)
+unique_library_counts <- sapply(unique_library, function(x) {sum(library_usage %in% x)})
+top_used_libraries <- sort(unique_library_counts, decreasing = TRUE)[1:25]       
+
+library_dataframe <- data.frame(counts = top_used_libraries,
+                                library = names(top_used_libraries))
+p2 <- ggplot(library_dataframe, aes(x = reorder(library,counts), y = counts)) + 
+  geom_bar(stat="identity", fill="steelblue") +
+  coord_flip() +
+  xlab("library") +
+  ggtitle(paste0("library usage")) +
+  theme(axis.text.x = element_text(angle = 0, hjust = 1),plot.title = element_text(hjust = .5)) 
+
+p2
+
+
+
+load("rfile_list.rda")
+pure_text <- lapply(rfile_list, function(x) {x[!grepl("^#", x) & !grepl("\\ ^#", x) & x != "" & x != " "]})
+rfile_text <- unlist(pure_text[!is.na(pure_text)])
+Sys.setlocale("LC_ALL", "C")
+
+pattern <- gregexpr("[[:alnum:]._ ]+\\(",rfile_text)
+functions <- unlist(regmatches(rfile_text,pattern))
+functions <- gsub(" *|\\(","",functions)
+unique_functions <- unique(functions[functions != "library" & functions != "function"])
+
+function_usage <- sapply(unique_functions, function(x){sum(functions %in% x)}) 
+self_defined_functions <- names(function_usage[which(function_usage == 1)])
+top_used_functions <- sort(function_usage, decreasing = TRUE)[1:25]
+
+function_dataframe <- data.frame(counts = top_used_functions,
+                                functions = names(top_used_functions))
+p3 <- ggplot(function_dataframe, aes(x = reorder(functions,counts), y = counts)) + 
+  geom_bar(stat="identity", fill="steelblue") +
+  coord_flip() +
+  xlab("function names") +
+  ggtitle(paste0("top used functions")) +
+  theme(axis.text.x = element_text(angle = 0, hjust = 1),plot.title = element_text(hjust = .5)) 
+
+p3
+
+```
